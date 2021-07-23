@@ -4,13 +4,13 @@ clear
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 apparatus = 'PEL'; %['ARPEL'] % this defines which geometry we are working with
 
-speed_isoplane_threshold = .5; %the speed at which the isoplane is drawn
+speedIsoplaneThreshold = .5; %the speed at which the isoplane is drawn
 
-visualize = false; %should we create graphs this time
+visualize = true; %should we create graphs this time
 
 %define the reduction_step_size value to reduce data size 
 %(data will be 1/reduction_step_size in each dimension)
-reduction_reduction_step_size_size = 20;
+reduction_step_size = 20;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                               VARIABLES
@@ -27,7 +27,7 @@ if strcmp(apparatus,'PEL')
     %locations of files with wildcard
     dataDir = sprintf('D:\\Sam\\Documents\\school\\Grad\\THESIS\\Data\\SAM_GUSTIN_PEL\\PEL_%01d-%01d_x_*mm_77V_16K\\PIV_MPd(4x16x16_75%%ov_ImgCorr)\\Avg Vel vector field',percent,recip_prcnt);
     %store locations of the numberOfSlicesices
-    Y_numberOfSlicesice_loc = [0 5 10 15 20 25];
+    ySliceLocs = [0 5 10 15 20 25];
     
 elseif strcmp(apparatus, 'ARPEL')
     fprintf('running for arpel\n'); 
@@ -38,7 +38,7 @@ elseif strcmp(apparatus, 'ARPEL')
     prcnt4 = 50;
     dataDir = sprintf('D:\\Sam\\Documents\\school\\THESIS\\Data\\Grad\\SAM_GUSTIN\\SAM_GUSTIN_ARPEL\\ARPEL_%01d_%01d_%01d_%01d_x_*mm_77V_16K\\PIV_MPd(4x16x16_75%%ov_ImgCorr)\\Avg Vel vector field', prcnt1, prcnt2, prcnt3, prcnt4);  
     %store locations of the numberOfSlicesices
-    Y_numberOfSlicesice_loc = [0 10 22 30];
+    ySliceLocs = [0 10 22 30];
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -60,76 +60,96 @@ if strcmp(apparatus, 'PEL')
         %primaryVelocityArray(6) = temp2;
 end
 
+clearvars temp temp2
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                          CONSISTENCY CHECK
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %verify the right number of numberOfSlicesices loaded
-if not(isequal(size(primaryVelocityArray),size(Y_numberOfSlicesice_loc')))
+if not(isequal(size(primaryVelocityArray),size(ySliceLocs')))
     fprintf('the wrong number of files/folder was read.  the program found')
     size(primaryVelocityArray)
     return;
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                         ALLOT WORKING TENSOR
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+flowField = primaryVelocityArray(1,1);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                              RENAME AXES
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+f = fieldnames(flowField);
+v = struct2cell(flowField);
+f{strmatch('y',f,'exact')} = 'z';
+f{strmatch('vy',f,'exact')} = 'vz';
+f{strmatch('unitvy',f,'exact')} = 'unitvz';
+f{strmatch('namey',f,'exact')} = 'namez';
+f{strmatch('namevy',f,'exact')} = 'namevz';
+f{strmatch('ysign',f,'exact')} = 'zsign';
+flowField = cell2struct(v,f);
+flowField.zsign = 'Z axis upward';
+flowField.namevz = 'u_z';
+flowField.namez = 'z';
+
+clearvars f v i;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                             PREALLOCATION
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %get dimensions of the velocity array
-[primaryArrayRowNum, primaryArrayColNum] = size(primaryVelocityArray(1,1).vx);
-
+ [primaryArrayRowNum, primaryArrayColNum] = size(primaryVelocityArray(1,1).vx);
+ 
 %preallocate memory
-numberOfSlices = length(Y_numberOfSlicesice_loc);
-
-speedTensor = zeros(primaryArrayRowNum,primaryArrayColNum,numberOfSlices);       %688x550x6   
-transparency = zeros(primaryArrayRowNum,primaryArrayColNum,numberOfSlices);      %688x550x6
-xPositionTensor = zeros(primaryArrayRowNum,primaryArrayColNum,numberOfSlices);   %688x550x6
-yPositionTensor = zeros(primaryArrayRowNum,primaryArrayColNum,numberOfSlices);   %688x550x6
-zPositionTensor = zeros(primaryArrayRowNum,primaryArrayColNum,numberOfSlices);   %688x550x6
-xVelTensor = zeros(primaryArrayRowNum,primaryArrayColNum,numberOfSlices);        %688x550x6
-yVelTensor = zeros(primaryArrayRowNum,primaryArrayColNum,numberOfSlices);        %688x550x6
-zVelTensor = zeros(primaryArrayRowNum,primaryArrayColNum,numberOfSlices);        %688x550x6
-
-if not(isequal(size(speedTens
-DataTensor=zeros(6,primaryArrayRowNum,primaryArrayColNum,numberOfSlices);  %688x550x6
+ numberOfSlices = length(ySliceLocs);
+ 
+ speedTensor = zeros(primaryArrayRowNum,primaryArrayColNum,numberOfSlices);       %688x550x6   
+% transparency = zeros(primaryArrayRowNum,primaryArrayColNum,numberOfSlices);      %688x550x6
+% xPositionTensor = zeros(primaryArrayRowNum,primaryArrayColNum,numberOfSlices);   %688x550x6
+% yPositionTensor = zeros(primaryArrayRowNum,primaryArrayColNum,numberOfSlices);   %688x550x6
+% zPositionTensor = zeros(primaryArrayRowNum,primaryArrayColNum,numberOfSlices);   %688x550x6
+% xVelTensor = zeros(primaryArrayRowNum,primaryArrayColNum,numberOfSlices);        %688x550x6
+% yVelTensor = zeros(primaryArrayRowNum,primaryArrayColNum,numberOfSlices);        %688x550x6
+% zVelTensor = zeros(primaryArrayRowNum,primaryArrayColNum,numberOfSlices);        %688x550x6
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                       MANUAL MESHGRID EQUIVALENT
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-[a, b, c] = meshgrid(1:2,1:2,4:7);
 
-
-vect = primaryVelocityArray(1,1);
 %this only needs to be done once
 %reformat x & z locations
-x = repmat(vect.x,[1,primaryArrayColNum]);
-x = reshape(x,[primaryArrayRowNum,primaryArrayColNum]);
-z = repelem(vect.y',primaryArrayRowNum)';
-z = reshape(z, [primaryArrayRowNum, primaryArrayColNum]);
-y = zeros(primaryArrayRowNum,primaryArrayColNum,numberOfSlices);
+% x = repmat(vect.x,[1,primaryArrayColNum]);
+% x = reshape(x,[primaryArrayRowNum,primaryArrayColNum]);
+% z = repelem(vect.y',primaryArrayRowNum)';
+% z = reshape(z, [primaryArrayRowNum, primaryArrayColNum]);
+% y = zeros(primaryArrayRowNum,primaryArrayColNum,numberOfSlices);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                BUILD 3D SPEED, POSITION, AND VELOCITY FIELDS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-for i = 1:size(primaryVelocityArray)
-    for j = 1:size(primaryVelocityArray(1))
-        vect = primaryVelocityArray(i,j);
-        
-        speedTensor(:,:,i)= (vect.vx.^2+vect.vy.^2).^(0.5)/1;% 1 is the normalization factor for making the measurement dimensionless
-        
-        xPositionTensor(:,:,i) = x;
-        zPositionTensor(:,:,i) = z;
-        xVelTensor(:,:,i) = vect.vx;
-        zVelTensor(:,:,i) = vect.vy;
-        
-        y(:,:,i) = ones(size(speedTensor(:,:,i))).*Y_numberOfSlicesice_loc(i);
-
-        transparency(:,:,i) = speedTensor(:,:,i)>speed_isoplane_threshold;
-
-   end
-end
+ for i = 1:size(primaryVelocityArray)
+     for j = 1:size(primaryVelocityArray(1))
+%         vect = primaryVelocityArray(i,j);
+%         
+         speedTensor(:,:,i)= (flowField.vx.^2+flowField.vz.^2).^(0.5)/1;% 1 is the normalization factor for making the measurement dimensionless
+%         xPositionTensor(:,:,i) = x;
+%         zPositionTensor(:,:,i) = z;
+%         xVelTensor(:,:,i) = vect.vx;
+%         zVelTensor(:,:,i) = vect.vy;
+%         
+%         y(:,:,i) = ones(size(speedTensor(:,:,i))).*ySliceLocs(i);
+% 
+%         transparency(:,:,i) = speedTensor(:,:,i)>speedIsoplaneThreshold;
+% 
+    end
+ end
+speedTensor = permute(speedTensor, [1 3 2]);
 
 if not(visualize)
     return;
@@ -137,52 +157,70 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                        REDUCE DATA
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+flowField.x = reduceData(reduction_step_size,flowField.x);
+flowField.y = ySliceLocs;
+flowField.z = reduceData(reduction_step_size,flowField.z);
+flowField.vy = zeros(size(flowField.vx));
+%vect.y = vect.y(1:reduction_step_size:end,1:reduction_step_size:end,:);
 %y_reduced = y(1:reduction_step_size:end,1:reduction_step_size:end,:);
-%spd = speedTensor(1:reduction_step_size:end,1:reduction_step_size:end,:);
+spd = reduceData(reduction_step_size,speedTensor);
 %x_reduced = xPositionTensor(1:reduction_step_size:end,1:reduction_step_size:end,:);
 %z_reduced = zPositionTensor(1:reduction_step_size:end,1:reduction_step_size:end,:);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                     CALC TRANSPARENCY
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-trans = transparency(1:reduction_step_size:end,1:reduction_step_size:end,size(primaryVelocityArray));
+%trans = transparency(1:reduction_step_size:end,1:reduction_step_size:end,size(primaryVelocityArray));
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                        INTERPOLATE IN Y AXIS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-interp_reduction_step_size = 1;
-
-refV = primaryVelocityArray(1,1);
-if strcmp(apparatus,'PEL')
-   desired_y_vect = Y_numberOfSlicesice_loc(1):interp_reduction_step_size:Y_numberOfSlicesice_loc(6);
-elseif strcmp(apparatus, 'ARPEL')
-    desired_y_vect = Y_numberOfSlicesice_loc(1):interp_reduction_step_size:Y_numberOfSlicesice_loc(4);
-end
-
-[Xq,Yq,Zq] = meshgrid(refV.x, desired_y_vect, refV.y);
-[Xi,Yi,Zi] = meshgrid(refV.x, refV.y, Y_numberOfSlicesice_loc);
-
-Xi = unique(Xi);
-Yi = unique(Yi);
-Zi = unique(Zi);
-
-%Xi = refV.x';
-%Yi = refV.y';
-%Zi = Y_numberOfSlicesice_loc;
-
-speedTensor = permute(speedTensor, [2 1 3]);
-
-interp_speed = interp3(Xi, Yi, Zi, speedTensor, Xq, Yq, Zq, 'spline');
-[Xi,Yi,Zi] = size(interp_speed);
+% interp_reduction_step_size = 1;
+% 
+% refV = primaryVelocityArray(1,1);
+% if strcmp(apparatus,'PEL')
+%    desired_y_vect = ySliceLocs(1):interp_reduction_step_size:ySliceLocs(6);
+% elseif strcmp(apparatus, 'ARPEL')
+%     desired_y_vect = ySliceLocs(1):interp_reduction_step_size:ySliceLocs(4);
+% end
+% 
+% [Xq,Yq,Zq] = meshgrid(refV.x, desired_y_vect, refV.y);
+% [Xi,Yi,Zi] = meshgrid(refV.x, refV.y, ySliceLocs);
+% 
+% Xi = unique(Xi);
+% Yi = unique(Yi);
+% Zi = unique(Zi);
+% 
+% %Xi = refV.x';
+% %Yi = refV.y';
+% %Zi = ySliceLocs;
+% 
+% speedTensor = permute(speedTensor, [2 1 3]);
+% 
+% interpSpeed = interp3(Xi, Yi, Zi, speedTensor, Xq, Yq, Zq, 'spline');
+% [Xi,Yi,Zi] = size(interpSpeed);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                        FORMAT FIGURE
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+
+dtype(spd
+spd = premute(spd, [2 1 3]);
+
+[f1,v1] = isosurface(flowField.x, flowField.y, flowField.z, spd, speedIsoplaneThreshold);
+[f2,v2,e2] = isocaps(flowField.x, flowField.y, flowField.z, spd, speedIsoplaneThreshold);
+
+% speedTensor = permute(speedTensor,[2 1 3]);
+% interpSpeed = permute(spd, [2 3 1]);
+% [Xq,Yq,Zq] = meshgrid(flowField.x, ySliceLocs, flowField.z);
+    
+% 
+% [f1,v1] = isosurface(Xq, Yq, Zq, interpSpeed,speedIsoplaneThreshold);
+% [f2,v2,e2] = isocaps(Xq,Yq,Zq,interpSpeed,speedIsoplaneThreshold);
+
 figure('Renderer', 'painters', 'Position', [0 0 1200 1000]);
-hold on
-tset = 'test';
-title(tset);
-%ylim([min(Y_numberOfSlicesice_loc),max(Y_numberOfSlicesice_loc)]);
+title('test');
+%ylim([min(ySliceLocs),max(ySliceLocs)]);
 %zlim([-5,105]);
 %xlim([30, inf]);
 colorbar
@@ -190,26 +228,19 @@ caxis([0,1])
 xlabel('x position [mm]');
 ylabel('y position [mm]');
 zlabel('z position [mm]');
-
 %make a raw isosurface
-speedTensor = permute(speedTensor,[2 1 3]);
-interp_speed = permute(interp_speed, [2 3 1]);
-[Xq,Yq,Zq] = meshgrid(refV.y, refV.x, desired_y_vect);
 
-[f1,v1] = isosurface(Xq, Yq, Zq, interp_speed,speed_threshold);
-[f2,v2,e2] = isocaps(Xq,Yq,Zq,interp_speed,speed_threshold);
-
-%[f1,v1] = isosurface(xPositionTensor, y, zPositionTensor, speedTensor,speed_threshold);
-%[f2,v2,e2] = isocaps(xPositionTensor,y,zPositionTensor,speedTensor,speed_threshold);
+%[f1,v1] = isosurface(xPositionTensor, y, zPositionTensor, speedTensor,speedIsoplaneThreshold);
+%[f2,v2,e2] = isocaps(xPositionTensor,y,zPositionTensor,speedTensor,speedIsoplaneThreshold);
 p1 = patch('Faces',f1,'Vertices',v1);
 p1.EdgeColor = 'none';
 p1.FaceColor = 'blue';
-%p1.FaceAlpha = 0.5;
+p1.FaceAlpha = 0.5;
 p2 = patch('Faces',f2,'Vertices',v2,'FaceVertexCData',e2);
 p2.FaceColor = 'interp';
 p2.EdgeColor = 'none';
 camlight(135,135);
-
+return;
 
 %pbaspect([2,1,1]);
 view(-45,45);
