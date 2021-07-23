@@ -90,9 +90,15 @@ xVelTensor = zeros(primaryArrayRowNum,primaryArrayColNum,numberOfSlices);       
 yVelTensor = zeros(primaryArrayRowNum,primaryArrayColNum,numberOfSlices);        %688x550x6
 zVelTensor = zeros(primaryArrayRowNum,primaryArrayColNum,numberOfSlices);        %688x550x6
 
+if not(isequal(size(speedTens
+DataTensor=zeros(6,primaryArrayRowNum,primaryArrayColNum,numberOfSlices);  %688x550x6
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                       MANUAL MESHGRID EQUIVALENT
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+[a, b, c] = meshgrid(1:2,1:2,4:7);
+
 
 vect = primaryVelocityArray(1,1);
 %this only needs to be done once
