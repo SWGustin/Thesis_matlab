@@ -1,6 +1,7 @@
+workingdir = 'D:\\Sam\\Documents\\school\\Grad\\THESIS\\'
+run variables.mat;
+load(fullfile(workigndir,'variables.mat')); %load variables
 
-load(fullfile('D:\Sam\Documents\school\Grad\THESIS','variables.m'))
-return;
 %get dimensions of the velocity array
 [nrows, ncols] = size(first_v.vx);
 
