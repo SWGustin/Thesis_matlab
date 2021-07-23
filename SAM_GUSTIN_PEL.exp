@@ -1,0 +1,11 @@
+// File <B:/SAM_GUSTIN/SAM_GUSTIN_THESIS.exp> created by ProjectManager at 08.02.2021 09:26:00
+
+#GROUP Experiment
+ExperimentType = "PIV";
+ExperimentDate = "08.02.2021 09:26:00";
+ExperimentComment = "";
+ExperimentGroups = "";
+ExperimentUserBufferCount = 30;
+ExperimentUser = "Default User";
+ExperimentCreateVersion = "DaVis 10.1.2";
+
