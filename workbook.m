@@ -1,16 +1,18 @@
 clear
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                               SETTINGS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 apparatus = 'PEL'; %['ARPEL'] % this defines which geometry we are working with
 
-speedIsoplaneThreshold = .05; %the speed at which the isoplane is drawn
+speedIsoplaneThreshold = .25; %the speed at which the isoplane is drawn
 
 visualize = true; %should we create graphs this time
 
 %define the reductionStepSize value to reduce data size 
 %(data will be 1/reductionStepSize in each dimension)
-reductionStepSize = 1;
+reductionStepSize = 8;
 
 %step between y layers in the interpolation (units of mm)
 interpStep = 1;
@@ -111,12 +113,17 @@ flowField(1).y = ySliceLocs;
 flowField(1).z = reduceData(reductionStepSize,flowField(1).z);
 
 %these differ
-for i = 1:length(flowField)
-    flowField(i).vx = reduceData(reductionStepSize,flowField(i).vx);
-    flowField(i).vy = zeros(size(flowField(i).vx));
-    flowField(i).vz = reduceData(reductionStepSize,flowField(i).vz);
-end
+% for i = 1:length(flowField)
+%     flowField(i).vx = reduceData(reductionStepSize,flowField(i).vx);
+%     flowField(i).vy = zeros(size(flowField(i).vx));
+%     flowField(i).vz = reduceData(reductionStepSize,flowField(i).vz);
+% end
 
+for i = 1:length(flowField)
+    flowField(i).vx = blockRMS(reductionStepSize,flowField(i).vx);
+    flowField(i).vy = zeros(size(flowField(i).vx));
+    flowField(i).vz = blockRMS(reductionStepSize,flowField(i).vz);
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                             PREALLOCATION
@@ -165,6 +172,7 @@ clearvars flowSlice flowField permOrder;
 if not(visualize)
     return;
 end
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                        INTERPOLATE IN Y AXIS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -198,7 +206,7 @@ zlabel('z position [mm]');
 p1 = patch('Faces',f1,'Vertices',v1);
 p1.EdgeColor = 'none';
 p1.FaceColor = 'blue';
-p1.FaceAlpha = 0.5;
+%p1.FaceAlpha = 0.5;
 p2 = patch('Faces',f2,'Vertices',v2,'FaceVertexCData',e2);
 p2.FaceColor = 'interp';
 p2.EdgeColor = 'none';

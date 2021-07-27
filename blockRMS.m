@@ -1,23 +1,16 @@
 function result = blockRMS(step,data)
 
-%look to implement rms rather than just picking a value
-if ndims(data) == 2
-    if size(data(1)) == 1 %1D
-        result = zeros(size(data(1:step:end)));
-        j = 1;
-        for i = 1:step:length(data)
-            noOfCells = min(length(data)-i-step,step);
-            result(j) = (sum(data(i:i+noOfCells)).^2/noOfCells)^0.5;
-            j = j + 1;
+    [xLimIn, yLimIn] =  size(data);
+    result = zeros(ceil(xLimIn/step),ceil(yLimIn/step));
+    [xLimOut, yLimOut] =  size(result);
+    for x = 1:xLimOut
+        for y = 1:yLimOut
+                xmin = (x-1)*step+1;
+                xmax = min(x*step,xLimIn);
+                ymin = (y-1)*step+1;
+                ymax = min(y*step,yLimIn);
+                result(x,y) = (sum(sum(data(xmin:xmax,ymin:ymax).^2))...
+                /numel(data(xmin:xmax,ymin:ymax)))^0.5;
         end
-    else
-        disp 2d
-        
     end
-elseif ndims(data) == 3
-   result = zeros(1:step:size(data,1),1:step:size(data,2),1:step:size(data,3));
-   
 end
-
-
-
