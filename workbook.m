@@ -212,7 +212,7 @@ zlabel('z position [mm]');
 p1 = patch('Faces',f1,'Vertices',v1);
 p1.EdgeColor = 'none';
 p1.FaceColor = 'blue';
-p1.FaceAlpha = 0.5;
+%p1.FaceAlpha = 0.5;
 p2 = patch('Faces',f2,'Vertices',v2,'FaceVertexCData',e2);
 p2.FaceColor = 'interp';
 p2.EdgeColor = 'none';
@@ -221,26 +221,30 @@ camlight(135,135);
 %pbaspect([2,1,1]);
 view(-45,45);
 
-%                           x                    y         z
-[Sx, Sy, Sz] = meshgrid([10 85 100 125],  0:5:15,   10);
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                        ADD STREAMLINES
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+[Sx, Sy, Sz] = meshgrid([10 85 100 125],  0:5:15,   10);
 
 test = ones(size(yVelocityTensorInterp));
 test2 = zeros(size(yVelocityTensorInterp));
 h2 = streamline(xAxis,yAxis,zAxis,xVelocityTensorInterp, ...
     yVelocityTensorInterp, zVelocityTensorInterp,...
     Sx, Sy,Sz);
-clearvars *
-return;
-%h2 = streamline(zPositionTensor,xPositionTensor,y,xVelocityTensor, ones(size(xVelocityTensor))*0, zVelocityTensor, Sx, Sy,Sz);
-%h2 = streamline(xPositionTensor, z, yPositionTensor, yVelocityTensor, zVelocityTensor, xVelocityTensor, Sx, Sy,Sz);
 
 %set the streamline color
 set(h2, 'color', [1 0 0]);
 
-axis tight equal
-load('variables.mat') %load variables
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                        ADD CONEPLOT
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+clearvars *
+return;
 %get dimensions of the velocity array
 [primaryArrayRowNum, primaryArrayColNum] = size(first_v.vx);
 
