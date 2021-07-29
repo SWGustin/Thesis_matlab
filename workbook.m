@@ -6,16 +6,22 @@ clearvars *;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 apparatus = 'PEL'; %['ARPEL'] % this defines which geometry we are working with
 
-speedIsoplaneThreshold = .25; %the speed at which the isoplane is drawn
+speedIsoplaneThreshold = 0.25; %the speed at which the isoplane is drawn
 
 visualize = true; %should we create graphs this time
+addIsosurface = true;
+addStreamlines = true;
+addConeplot = true;
+addPic = true;
+
+coneSize = 2;
 
 %define the reductionStepSize value to reduce data size 
 %(data will be 1/reductionStepSize in each dimension)
-reductionStepSize = 8;
+reductionStepSize = 10;
 
 %step between y layers in the interpolation (units of mm)
-interpStep = 1;
+interpStep = .5;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                               VARIABLES
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -190,147 +196,90 @@ zVelocityTensorInterp = interp3(xref,yref,zref, zVelocityTensor, vyInterpQueryPo
 clearvars xVelocityTensor yVelocityTensor zVelocityTensor zref xref yref 
 clearvars vxInterpQueryPoint vyInterpQueryPoint vzInterpQueryPoint
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                        FORMAT FIGURE
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-[f1,v1] = isosurface(xAxis, yAxis, zAxis, speedTensor, speedIsoplaneThreshold);
-[f2,v2,e2] = isocaps(xAxis, yAxis, zAxis, speedTensor, speedIsoplaneThreshold);
-% 
 figure('Renderer', 'painters', 'Position', [0 0 1200 1000]);
 title('test');
-%ylim([yAxis(1)-1,yAxis(end)+1]);
-%zlim([-5,105]);
-%xlim([20, inf]);
+ylim([yAxis(1)-1,yAxis(end)+1]);
+zlim([-5,105]);
+xlim([20, inf]);
 colorbar
-%caxis([0,1])
+caxis([0,1])
 xlabel('x position [mm]');
 ylabel('y position [mm]');
 zlabel('z position [mm]');
-%make a raw isosurface
-
-p1 = patch('Faces',f1,'Vertices',v1);
-p1.EdgeColor = 'none';
-p1.FaceColor = 'blue';
-%p1.FaceAlpha = 0.5;
-p2 = patch('Faces',f2,'Vertices',v2,'FaceVertexCData',e2);
-p2.FaceColor = 'interp';
-p2.EdgeColor = 'none';
 camlight(135,135);
 
-%pbaspect([2,1,1]);
+pbaspect([2,1,1]);
 view(-45,45);
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                        BUILD ISOSURFACE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if addIsosurface
+    
+    [f1,v1] = isosurface(xAxis, yAxis, zAxis, speedTensor, speedIsoplaneThreshold);
+    [f2,v2,e2] = isocaps(xAxis, yAxis, zAxis, speedTensor, speedIsoplaneThreshold);
+    p1 = patch('Faces',f1,'Vertices',v1);
+    p1.EdgeColor = 'none';
+    p1.FaceColor = 'blue';
+    p1.FaceAlpha = 0.5;
+    p2 = patch('Faces',f2,'Vertices',v2,'FaceVertexCData',e2);
+    p2.FaceColor = 'interp';
+    p2.EdgeColor = 'none';
+    clearvars p1 p2 f1 v1 f2 v2 e2
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                        ADD STREAMLINES
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-[Sx, Sy, Sz] = meshgrid([10 85 100 125],  0:5:15,   10);
+if addStreamlines
+    [Sx, Sy, Sz] = meshgrid([10 85 100 125],  0:5:15,   10);
+    h2 = streamline(xAxis,yAxis,zAxis,xVelocityTensorInterp, ...
+        yVelocityTensorInterp, zVelocityTensorInterp,...
+        Sx, Sy,Sz);
+    %set the streamline color
+    set(h2, 'color', [1 0 0]);
 
-test = ones(size(yVelocityTensorInterp));
-test2 = zeros(size(yVelocityTensorInterp));
-h2 = streamline(xAxis,yAxis,zAxis,xVelocityTensorInterp, ...
-    yVelocityTensorInterp, zVelocityTensorInterp,...
-    Sx, Sy,Sz);
-
-%set the streamline color
-set(h2, 'color', [1 0 0]);
-
-
+    clearvars Sx Sy Sz
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                        ADD CONEPLOT
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+if addConeplot
+    
+    [Sx, Sy, Sz] = meshgrid(30:20:180,  0:5:15,   10:10:50);
+
+    cp = coneplot(xAxis,yAxis,zAxis,...
+                xVelocityTensorInterp, yVelocityTensorInterp, zVelocityTensorInterp,...
+                Sx, Sy,Sz,...
+                coneSize); %relative size of the cones
+    set(cp, 'FaceColor', 'green', 'EdgeColor','none');
+    
+    clearvars Sx Sy Sz
+end
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                        ADD PICTURE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+if addPic
+    hold on
+    corners_x = [20 20;180 180];
+    corners_y = [0 25; 0 25];
+    corners_z = [0 0; 0 0];
+    img = imread('sample_pel_background.png');
+    surf(corners_x, corners_y, corners_z,...
+    'CData', img,...
+    'FaceColor', 'texturemap'); 
+    
+end
+
 
 clearvars *
-return;
-%get dimensions of the velocity array
-[primaryArrayRowNum, primaryArrayColNum] = size(first_v.vx);
-
-%store locations of the slices
-Y_slice_loc = [0 11 15 20 25];
-
-%build coherent vectorized dataset
-for i = 1:size(v)
-    for j = 1:size(v(1))
-        %assign the ariablename v_working to v(i,j)
-        v_working = v(i,j);
-        %reformat x and z locations
-        x_working = repmat(v_working.x,[1,primaryArrayColNum]);1
-        z_working = repelem(v_working.y',primaryArrayRowNum)';
-        
-        %reduce the vectors
-        x_working = x_working(1:step:end);
-        z_working = z_working(1:step:end);
-        
-        %build y slice
-        y_working = ones(size(x_working)).*Y_slice_loc(i);
-        
-        %reformat the velocity matrices 
-        vx_working = reshape(v_working.vx, [1,numel(v_working.vx)]);
-        vz_working = reshape(v_working.vy, [1,numel(v_working.vy)]);
-        
-        %reduce the vecotrs
-        vx_working = vx_working(1:step:end);
-        vz_working = vz_working(1:step:end);
-
-        %accumulate the results
-        X = [X x_working];
-        Z = [Z z_working];
-        Y = [Y y_working];
-        vx = [vx vx_working];
-        vz = [vz vz_working];
-        
-    end
-end
-vy = zeros(size(vz));
-
-figure('Renderer', 'painters', 'Position', [0 0 1200 1000]);
-quiver3(X,Y,Z,vx,vy,vz,5);
-load('variables.mat') %load variables
-
-%get dimensions of the velocity array
-[primaryArrayRowNum, primaryArrayColNum] = size(first_v.vx);
-
-%store locations of the slices
-Y_slice_loc = [0 11 15 20 25];
-
-%build coherent vectorized dataset
-for i = 1:size(v)
-    for j = 1:size(v(1))
-        %assign the ariablename v_working to v(i,j)
-        v_working = v(i,j);
-        %reformat x and z locations
-        x_working = repmat(v_working.x,[1,primaryArrayColNum]);
-        z_working = repelem(v_working.y',primaryArrayRowNum)';
-        
-        %reduce the vectors
-        x_working = x_working(1:step:end);
-        z_working = z_working(1:step:end);
-        
-        %build y slice
-        y_working = ones(size(x_working)).*Y_slice_loc(i);
-        
-        %reformat the velocity matrices 
-        vx_working = reshape(v_working.vx, [1,numel(v_working.vx)]);
-        vz_working = reshape(v_working.vy, [1,numel(v_working.vy)]);
-        
-        %reduce the vecotrs
-        vx_working = vx_working(1:step:end);
-        vz_working = vz_working(1:step:end);
-
-        %accumulate the results
-        X = [X x_working];
-        Z = [Z z_working];
-        Y = [Y y_working];
-        vx = [vx vx_working];
-        vz = [vz vz_working];
-        
-    end
-end
-vy = zeros(size(vz));
-
-figure('Renderer', 'painters', 'Position', [0 0 1200 1000]);
-quiver3(X,Y,Z,vx,vy,vz,5);
-
