@@ -1,5 +1,5 @@
-clear
-
+clear;
+clearvars *;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                               SETTINGS
@@ -155,7 +155,7 @@ for i = 1:length(flowField)
 % L is the normalization factor for making the measurement dimensionless
     speedTensor(:,:,i)= (flowField(i).vx.^2+flowField(i).vz.^2).^(0.5)./L;% 
     xVelocityTensor(:,:,i) = flowField(i).vx./L;
-    zVelocityTensor(:,:,i) = flowField(i).vy./L;
+    zVelocityTensor(:,:,i) = flowField(i).vz./L;
 %	transparencyTensor(:,:,i) = speedTensor(:,:,i)>speedIsoplaneThreshold;
 end
 
@@ -172,17 +172,23 @@ clearvars flowSlice flowField permOrder;
 if not(visualize)
     return;
 end
-
+clearvars visualize
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                        INTERPOLATE IN Y AXIS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 [xref, yref, zref] = meshgrid(yAxis, xAxis, zAxis);
 
 yAxis = [yAxis(1):interpStep:yAxis(end)];
-[vxInterp, vyInterp, vzInterp] ...
+[vxInterpQueryPoint, vyInterpQueryPoint, vzInterpQueryPoint] ...
         = meshgrid(xAxis,yAxis,zAxis);
 
-speedTensor = interp3(xref,yref,zref, speedTensor, vyInterp, vxInterp, vzInterp, 'spline');
+speedTensor = interp3(xref,yref,zref, speedTensor, vyInterpQueryPoint, vxInterpQueryPoint, vzInterpQueryPoint, 'spline');
+xVelocityTensorInterp = interp3(xref,yref,zref, xVelocityTensor, vyInterpQueryPoint, vxInterpQueryPoint, vzInterpQueryPoint, 'spline');
+yVelocityTensorInterp = interp3(xref,yref,zref, yVelocityTensor, vyInterpQueryPoint, vxInterpQueryPoint, vzInterpQueryPoint, 'spline');
+zVelocityTensorInterp = interp3(xref,yref,zref, zVelocityTensor, vyInterpQueryPoint, vxInterpQueryPoint, vzInterpQueryPoint, 'spline');
+
+clearvars xVelocityTensor yVelocityTensor zVelocityTensor zref xref yref 
+clearvars vxInterpQueryPoint vyInterpQueryPoint vzInterpQueryPoint
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                        FORMAT FIGURE
@@ -190,12 +196,12 @@ speedTensor = interp3(xref,yref,zref, speedTensor, vyInterp, vxInterp, vzInterp,
 
 [f1,v1] = isosurface(xAxis, yAxis, zAxis, speedTensor, speedIsoplaneThreshold);
 [f2,v2,e2] = isocaps(xAxis, yAxis, zAxis, speedTensor, speedIsoplaneThreshold);
-
+% 
 figure('Renderer', 'painters', 'Position', [0 0 1200 1000]);
 title('test');
-ylim([yAxis(1)-1,yAxis(end)+1]);
-zlim([-5,105]);
-xlim([20, inf]);
+%ylim([yAxis(1)-1,yAxis(end)+1]);
+%zlim([-5,105]);
+%xlim([20, inf]);
 colorbar
 %caxis([0,1])
 xlabel('x position [mm]');
@@ -206,7 +212,7 @@ zlabel('z position [mm]');
 p1 = patch('Faces',f1,'Vertices',v1);
 p1.EdgeColor = 'none';
 p1.FaceColor = 'blue';
-%p1.FaceAlpha = 0.5;
+p1.FaceAlpha = 0.5;
 p2 = patch('Faces',f2,'Vertices',v2,'FaceVertexCData',e2);
 p2.FaceColor = 'interp';
 p2.EdgeColor = 'none';
@@ -214,12 +220,18 @@ camlight(135,135);
 
 %pbaspect([2,1,1]);
 view(-45,45);
-[Sx, Sy, Sz] = meshgrid(10:10:100, 0:5:200, 0:10:200);
 
+%                           x                    y         z
+[Sx, Sy, Sz] = meshgrid([10 85 100 125],  0:5:15,   10);
+
+
+test = ones(size(yVelocityTensorInterp));
+test2 = zeros(size(yVelocityTensorInterp));
+h2 = streamline(xAxis,yAxis,zAxis,xVelocityTensorInterp, ...
+    yVelocityTensorInterp, zVelocityTensorInterp,...
+    Sx, Sy,Sz);
 clearvars *
 return;
-%h2 = streamline(xPositionTensor,y,zPositionTensor,yVelocityTensor, zVelocityTensor, xVelocityTensor, Sx, Sy,Sz);
-
 %h2 = streamline(zPositionTensor,xPositionTensor,y,xVelocityTensor, ones(size(xVelocityTensor))*0, zVelocityTensor, Sx, Sy,Sz);
 %h2 = streamline(xPositionTensor, z, yPositionTensor, yVelocityTensor, zVelocityTensor, xVelocityTensor, Sx, Sy,Sz);
 
